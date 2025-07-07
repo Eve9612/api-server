@@ -1,2 +1,2 @@
 # api-server
-contains products 
+back end server that holds data permanently 
