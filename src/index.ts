@@ -3,6 +3,10 @@ import express, { Request, Response } from 'express';
 import { Product } from './Product';
 import { v4 as uuidv4 } from 'uuid'; 
 import { Update } from './Update';
+import connectDB from './db';
+import ProductModel, { IProduct } from './models/Product';
+
+connectDB(); // Connect to MongoDB
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -25,50 +29,50 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // READ all products
-app.get('/products', (req: Request, res: Response<Product[]>) => {
-    res.json(products);
-});
-
+app.get('/products', async (req: Request, res: Response) => {
+    try {
+      const products = await ProductModel.find();
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
+  });
+  
 // CREATE a new product
-app.post('/product', (req: Request, res: Response<Product>) => {
-    const newProduct: Product = { id_: uuidv4(), ...req.body };
-    products.push(newProduct);
-    res.status(201).json(newProduct);
+app.post('/product', async (req: Request, res: Response) => {
+  try {
+    const newProduct = new ProductModel({ id_: uuidv4(), ...req.body });
+    const savedProduct = await newProduct.save();
+    res.status(201).json(savedProduct);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create product' });
+  }
 });
 
 // UPDATE a product by ID
-app.put('/products/:id', (req: Request<{ id: string }, {}, Update>, res: Response) => {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    const index = products.findIndex(p => p.id === id);
-    console.log("the index is ",index);
-    console.log("the old data is ",products[index]);
-    console.log("the new data is ",updateData);
-    if (index === -1) {
-        return res.status(404).json({ error: 'Product not found' });
+app.put('/products/:id', async (req: Request, res: Response) => {
+    try {
+      const updatedProduct = await ProductModel.findOneAndUpdate(
+        { id: req.params.id },
+        req.body,
+        { new: true }
+      );
+      if (!updatedProduct) return res.status(404).json({ error: 'Product not found' });
+      res.json(updatedProduct);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update product' });
     }
-
-    products[index] = { ...products[index], ...updateData };
-    res.json(products[index]);
-});
-
-app.delete('/products/:id', (req: Request<{ id: string }>, res: Response) => {
-  const { id } = req.params;
-
-  const index = products.findIndex(p => p.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: 'Product not found' });
-  }
-
-  // Remove product
-  const deletedProduct = products.splice(index, 1)[0];
-  console.log("the id is", id)
-  console.log("the index is", index)
-  console.log("the deleted product is", deletedProduct)
-  res.json({ message: 'Product deleted', product: deletedProduct });
+  });
   
-});
+  app.delete('/products/:id', async (req: Request, res: Response) => {
+    try {
+      const deletedProduct = await ProductModel.findOneAndDelete({ id: req.params.id });
+      if (!deletedProduct) return res.status(404).json({ error: 'Product not found' });
+      res.json({ message: 'Product deleted', product: deletedProduct });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete product' });
+    }
+  });
 
 app.listen(
     port, 
