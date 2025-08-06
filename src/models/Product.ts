@@ -1,6 +1,7 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 
 export interface IProduct extends Document {
+  id_: string;
   id: string;
   title: string;
   image: string;
@@ -8,12 +9,14 @@ export interface IProduct extends Document {
   link: string;
 }
 
-const ProductSchema: Schema = new Schema({
-  id: { type: String, required: true },
+const productSchema = new mongoose.Schema<IProduct>({
+  id_: { type: String, required: true },
+  id: { type: String, required: true, unique: true },  // required for update/delete to work
   title: { type: String, required: true },
-  image: { type: String, required: true },
-  price: { type: Number, required: true },
-  link: { type: String, required: true },
+  image: String,
+  price: Number,
+  link: String,
 });
 
-export default mongoose.model<IProduct>('Product', ProductSchema);
+const ProductModel = mongoose.model<IProduct>('Product', productSchema);
+export default ProductModel;
